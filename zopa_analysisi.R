@@ -5,39 +5,28 @@ install.packages('ggthemes')
 install.packages('scales')
 
 
-
+#############################
 library(ggplot2)
 library(dplyr)
 library(magrittr)
 library(ggthemes)
 library(scales)
 
-
+#############################
 # Data Input
 df <- read.csv('data/data_for_loanbook_extract_2016-12-01.csv')
 
 
 # check colnames
 df %>% colnames()
-# [1] "Snapshot.Date"           
-# [2] "Encrypted.Loan.ID"       
-# [3] "Encrypted.Member.ID"     
-# [4] "Disbursal.date"          
-# [5] "Original.Loan.Amount"    
-# [6] "Principal.Collected"     
-# [7] "Interest.Collected"      
-# [8] "Total.number.of.payments"
-# [9] "Last.payment.date"       
-# [10] "Term"                    
-# [11] "Lending.rate"            
-# [12] "Latest.Status"           
-# [13] "Date.of.Default"         
-# [14] "PostCode"  
 
+#############################
 # Summary Statistics
 summary(df)
 #* updated to 2016/12/1
 
+
+#############################
 # Split Disbursal.date into year, month, and day
 df <- df %>% mutate(
   yyyy = Disbursal.date %>% substr(1,4) %>% as.integer(),
@@ -54,14 +43,7 @@ amt <- df %>% group_by(yyyy) %>% summarise(
 amt %>% ggplot(aes(x=yyyy, y=loan_amount)) + geom_line()
 
 
-# Someone says that: The Peer-to-Peer Finance Association (P2PFA) expects the sector to double in size every six months for the foreseeable future.
-amt <- amt %>% mutate(ln_amt=log(loan_amount), 
-                      rate=100*c(NA, diff(ln_amt)),
-                      rate=round(rate, 2))
-
-amt %>% ggplot(aes(x=yyyy, y=rate, label=rate)) + geom_line() + geom_text()
-
-
+#############################
 # Q:Interest rate
 g <- df %>% 
   ggplot(aes(x=Lending.rate, fill=factor(yyyy))) + 
@@ -75,6 +57,7 @@ df %>% group_by(yyyy) %>%
             sd=sd(Lending.rate))
 
 
+#############################
 # Q:What is the most popular loan term 
 # *1. Term ranges from 6 to 60
 # *2. What's the most popular product
@@ -88,6 +71,7 @@ g <- terms %>%
 g
 
 
+#############################
 # Q:term structure 
 # * price is not monotonically increasing in term period
 df %>% group_by(Term) %>% 
@@ -103,6 +87,7 @@ df %>% group_by(yyyy, Term) %>%
   ggplot(aes(x=Term, y=int)) + geom_line() + facet_wrap(~ yyyy)
 
 
+#############################
 #Q: default rate
 defl <- df %>% 
   mutate(default= ifelse(Latest.Status=='Default', 1, 0)) %>% 
@@ -115,6 +100,7 @@ defl %>% ggplot(aes(x=yyyy, y=n_default)) + geom_line() + geom_text(aes(label=ro
 defl
 
 
+#############################
 # Status analysis
 n_status <- df %>% 
   group_by(yyyy, Latest.Status) %>% 
@@ -125,6 +111,7 @@ g <- n_status %>% ggplot(aes(x=yyyy, y=counts, fill=factor(Latest.Status))) +
 
 g
 
+#############################
 # Old Custom rate
 n_active <- df %>% filter(Latest.Status=='Active') %>% select(Encrypted.Member.ID) %>% unique() %>% nrow()
 n_active/(df %>% select(Encrypted.Member.ID) %>% unique %>% nrow)

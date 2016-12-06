@@ -1,0 +1,159 @@
+---
+title: "Zopa LoanBook Analysis"
+author: "Chiayi Yen"
+date: "2016年12月6日"
+output: slidy_presentation
+---
+
+
+## Prerequesite
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(magrittr)
+library(ggthemes)
+library(scales)
+```
+
+
+## Data Input
+
+```{r}
+df <- read.csv('data/data_for_loanbook_extract_2016-12-01.csv')
+df %>% colnames()
+df %>% head(1)
+```
+
+
+## Summary Statistics
+
+* updated to 2016/12/1
+
+```{r}
+summary(df)
+```
+
+
+## Q:Growth trend over ten years
+
+* Split Disbursal.date into year, month, and day
+* Let's look at the total loan amount
+
+```{r}
+df <- df %>% mutate(
+  yyyy = Disbursal.date %>% substr(1,4) %>% as.integer(),
+  mm = Disbursal.date %>% substr(6,7) %>% as.integer(),
+  dd = Disbursal.date %>% substr(9,10) %>% as.integer()
+)
+
+df %>% head(1)
+```
+
+```{r}
+amt <- df %>% group_by(yyyy) %>% summarise(
+loan_amount=sum(Original.Loan.Amount)
+) 
+amt %>% ggplot(aes(x=yyyy, y=loan_amount)) + geom_line()
+
+```
+
+
+
+## Q:Interest rate
+
+```{r}
+g <- df %>% 
+ggplot(aes(x=Lending.rate, fill=factor(yyyy))) + 
+geom_density(alpha=.3)
+
+g + facet_wrap(~yyyy)
+```
+
+```{r}
+df %>% group_by(yyyy) %>% 
+summarise(mean=mean(Lending.rate),
+median=median(Lending.rate),
+sd=sd(Lending.rate))
+```
+
+## Q:What is the most popular loan term 
+
+- Term ranges from 6 to 60
+- What's the most popular product
+
+```{r}
+terms <- df %>% group_by(yyyy, Term) %>% summarise(
+int=mean(Lending.rate),
+counts=n())
+terms %>% head()
+```
+
+```{r}
+terms %>% 
+ggplot(aes(x=yyyy, y=counts, fill=factor(Term))) + 
+geom_bar(stat="identity", position="fill")  
+```
+
+
+## Q:term structure 
+
+* price is not monotonically increasing in term period
+
+```{r}
+df %>% group_by(Term) %>% 
+  summarise(int=mean(Lending.rate),
+            counts=n()) %>% 
+  ggplot(aes(x=Term, y=int)) + geom_line()
+
+```
+
+* Let's check the pattern over 10 years, increasing slope or decreasing slope?
+
+```{r}
+df %>% group_by(yyyy, Term) %>% 
+summarise(int=mean(Lending.rate),
+counts=n()) %>% 
+ggplot(aes(x=Term, y=int)) + geom_line() + facet_wrap(~ yyyy)
+
+```
+
+
+## Q: default rate
+
+```{r}
+defl <- df %>% 
+mutate(default= ifelse(Latest.Status=='Default', 1, 0)) %>% 
+group_by(yyyy) %>% 
+summarise(counts=n(), 
+n_default=sum(default)/counts)
+defl %>% head()
+```
+
+```{r}
+defl %>% ggplot(aes(x=yyyy, y=n_default)) + geom_line() + geom_text(aes(label=round(100*n_default, 2)))
+
+```
+
+
+## Status analysis
+
+```{r}
+n_status <- df %>% 
+group_by(yyyy, Latest.Status) %>% 
+summarise(counts=n()) 
+n_status %>% head()
+```
+
+```{r}
+n_status %>% ggplot(aes(x=yyyy, y=counts, fill=factor(Latest.Status))) + 
+geom_bar(stat="identity", position="fill")  
+```
+
+
+## Old Custom rate
+
+```{r}
+n_active <- df %>% filter(Latest.Status=='Active') %>% select(Encrypted.Member.ID) %>% unique() %>% nrow()
+n_active/(df %>% select(Encrypted.Member.ID) %>% unique %>% nrow)
+```
