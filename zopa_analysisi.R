@@ -1,10 +1,17 @@
 install.packages('ggplot2')
+install.packages('dplyr')
+install.packages('magrittr')
+install.packages('ggthemes')
+install.packages('scales')
+
+
+
 library(ggplot2)
 library(dplyr)
 library(magrittr)
 library(ggthemes)
 library(scales)
-library(extrafont)
+
 
 # Data Input
 df <- read.csv('data/data_for_loanbook_extract_2016-12-01.csv')
